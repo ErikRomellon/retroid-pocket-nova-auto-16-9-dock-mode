@@ -69,14 +69,26 @@ That's it. The permission survives reboots, so you never have to connect it to t
 > [!NOTE]
 > **Windows SmartScreen** may warn you because the `.exe` is not signed. Click
 > **More info → Run anyway**.
->
-> If the installer can't find the console, try another cable or USB port and check that USB
-> debugging is on. If it still doesn't show up, install the
-> [Google USB driver](https://developer.android.com/studio/run/win-usb).
+
+### If the PC doesn't detect the console
+
+If the installer keeps saying *"No console detected"*, Windows is not giving adb access to the
+console. Usually this means there is no ADB driver for the Nova, or the console's USB mode is
+*charging only*. Google's USB driver doesn't list the Nova, so the easiest fix is to **skip USB**:
+
+1. Connect the console and the PC to the **same Wi-Fi network**.
+2. On the console: *Settings → System → Developer options → **Wireless debugging*** → turn it on
+   and open it → **Pair device with pairing code**.
+3. In the installer, click **Connect over Wi-Fi**. The pairing IP:port usually fills in by
+   itself. Type the 6-digit code and click **Pair and connect**.
+4. The install (or uninstall) then runs exactly as it does over USB.
+
+If you'd rather use USB: pull down the console's notification shade, tap the **USB** notification
+and choose **File transfer**. Then try another data cable or USB port.
 
 ### Uninstall
 
-Connect the console with USB debugging on and run **`NovaAutoTV-Uninstall.exe`**. It restores
+Connect the console with USB debugging on (or use **Connect over Wi-Fi**) and run **`NovaAutoTV-Uninstall.exe`**. It restores
 the screen, removes the app from the console and deletes the files the installer downloaded
 to your PC (`%LOCALAPPDATA%\NovaAutoTV`).
 
