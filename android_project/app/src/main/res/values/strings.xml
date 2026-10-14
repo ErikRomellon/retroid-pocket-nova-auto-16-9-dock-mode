@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Nova Auto TV</string>
+    <string name="perm_ok">Permission to change the resolution: granted ✔</string>
+    <string name="perm_missing">WRITE_SECURE_SETTINGS permission is missing. Run NovaAutoTV-Install.exe again on your PC, or run this once (with the Nova connected over USB and USB debugging enabled):</string>
+    <string name="copy_command">Copy command</string>
+    <string name="copied">Command copied</string>
+    <string name="hdmi_status">HDMI: %1$s (HDMI audio: %2$s, external display: %3$s)</string>
+    <string name="connected">CONNECTED</string>
+    <string name="disconnected">disconnected</string>
+    <string name="yes">yes</string>
+    <string name="no">no</string>
+    <string name="service_active">Service active</string>
+    <string name="resolution_label">Resolution when the TV is connected (width x height):</string>
+    <string name="delay_label">Delay before applying (ms):</string>
+    <string name="save">Save</string>
+    <string name="saved">Saved</string>
+    <string name="tests">Manual tests</string>
+    <string name="apply_169">Apply 16:9</string>
+    <string name="reset_43">Restore 4:3</string>
+    <string name="query">Show wm size</string>
+    <string name="invalid_resolution">Format: 1080x1920</string>
+    <string name="invalid_delay">Value between 0 and 60000</string>
+    <string name="language_label">Language:</string>
+    <string name="language_system">System</string>
+    <string name="credit">Created by ElPim_</string>
+    <string name="channel_name">HDMI monitor</string>
+    <string name="status_starting">Starting…</string>
+    <string name="status_pending_on">TV connected: applying in %1$d ms</string>
+    <string name="status_pending_off">TV disconnected: applying in %1$d ms</string>
+    <string name="status_no_perm">WRITE_SECURE_SETTINGS permission is missing (open the app)</string>
+    <string name="status_169">16:9 active (%1$s)</string>
+    <string name="status_43">Original 4:3</string>
+    <string name="status_error">Error: %1$s</string>
+</resources>

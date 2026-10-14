@@ -1,0 +1,20 @@
+# Herramientas descargadas (JDK, Android SDK, Gradle, wine) y keystore de firma: nunca al repo
+.toolchain/
+
+# Salidas de compilacion: los binarios se publican en GitHub Releases
+dist/
+build_exe/
+android_project/.gradle/
+android_project/build/
+android_project/app/build/
+android_project/local.properties
+
+# Python
+__pycache__/
+*.pyc
+
+# Sistema / editores
+.DS_Store
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="perm_ok">Permiso para cambiar la resolución: concedido ✔</string>
+    <string name="perm_missing">Falta el permiso WRITE_SECURE_SETTINGS. Vuelve a ejecutar NovaAutoTV-Install.exe en el PC, o ejecuta una vez (con la Nova conectada por USB y la depuración USB activada):</string>
+    <string name="copy_command">Copiar comando</string>
+    <string name="copied">Comando copiado</string>
+    <string name="hdmi_status">HDMI: %1$s (audio HDMI: %2$s, pantalla externa: %3$s)</string>
+    <string name="connected">CONECTADO</string>
+    <string name="disconnected">desconectado</string>
+    <string name="yes">sí</string>
+    <string name="no">no</string>
+    <string name="service_active">Servicio activo</string>
+    <string name="resolution_label">Resolución al conectar la TV (ancho x alto):</string>
+    <string name="delay_label">Retraso antes de aplicar (ms):</string>
+    <string name="save">Guardar</string>
+    <string name="saved">Guardado</string>
+    <string name="tests">Pruebas manuales</string>
+    <string name="apply_169">Aplicar 16:9</string>
+    <string name="reset_43">Restaurar 4:3</string>
+    <string name="query">Ver wm size</string>
+    <string name="invalid_resolution">Formato: 1080x1920</string>
+    <string name="invalid_delay">Valor entre 0 y 60000</string>
+    <string name="language_label">Idioma:</string>
+    <string name="language_system">Sistema</string>
+    <string name="credit">Creada por ElPim_</string>
+    <string name="channel_name">Vigilancia HDMI</string>
+    <string name="status_starting">Iniciando…</string>
+    <string name="status_pending_on">TV conectada: aplicando en %1$d ms</string>
+    <string name="status_pending_off">TV desconectada: aplicando en %1$d ms</string>
+    <string name="status_no_perm">Falta el permiso WRITE_SECURE_SETTINGS (abre la app)</string>
+    <string name="status_169">16:9 activo (%1$s)</string>
+    <string name="status_43">4:3 original</string>
+    <string name="status_error">Error: %1$s</string>
+</resources>

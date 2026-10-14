@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="perm_ok">Permissão para alterar a resolução: concedida ✔</string>
+    <string name="perm_missing">Falta a permissão WRITE_SECURE_SETTINGS. Execute de novo o NovaAutoTV-Install.exe no PC, ou execute uma vez (com o Nova conectado por USB e a depuração USB ativada):</string>
+    <string name="copy_command">Copiar comando</string>
+    <string name="copied">Comando copiado</string>
+    <string name="hdmi_status">HDMI: %1$s (áudio HDMI: %2$s, tela externa: %3$s)</string>
+    <string name="connected">CONECTADO</string>
+    <string name="disconnected">desconectado</string>
+    <string name="yes">sim</string>
+    <string name="no">não</string>
+    <string name="service_active">Serviço ativo</string>
+    <string name="resolution_label">Resolução ao conectar a TV (largura x altura):</string>
+    <string name="delay_label">Atraso antes de aplicar (ms):</string>
+    <string name="save">Salvar</string>
+    <string name="saved">Salvo</string>
+    <string name="tests">Testes manuais</string>
+    <string name="apply_169">Aplicar 16:9</string>
+    <string name="reset_43">Restaurar 4:3</string>
+    <string name="query">Ver wm size</string>
+    <string name="invalid_resolution">Formato: 1080x1920</string>
+    <string name="invalid_delay">Valor entre 0 e 60000</string>
+    <string name="language_label">Idioma:</string>
+    <string name="language_system">Sistema</string>
+    <string name="credit">Criado por ElPim_</string>
+    <string name="channel_name">Monitoramento HDMI</string>
+    <string name="status_starting">Iniciando…</string>
+    <string name="status_pending_on">TV conectada: aplicando em %1$d ms</string>
+    <string name="status_pending_off">TV desconectada: aplicando em %1$d ms</string>
+    <string name="status_no_perm">Falta a permissão WRITE_SECURE_SETTINGS (abra o app)</string>
+    <string name="status_169">16:9 ativo (%1$s)</string>
+    <string name="status_43">4:3 original</string>
+    <string name="status_error">Erro: %1$s</string>
+</resources>
