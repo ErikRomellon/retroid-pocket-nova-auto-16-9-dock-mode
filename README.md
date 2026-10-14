@@ -38,7 +38,7 @@ language, and you can also pick one by hand.
 ### 1. Download
 
 Go to **[Releases](https://github.com/ErikRomellon/retroid-pocket-nova-auto-16-9-dock-mode/releases/latest)**
-and download **`NovaAutoTV-v3.0.zip`**. Unzip it. Inside you will find:
+and download **`NovaAutoTV-v3.1.zip`**. Unzip it. Inside you will find:
 
 | File | What it is for |
 | --- | --- |
