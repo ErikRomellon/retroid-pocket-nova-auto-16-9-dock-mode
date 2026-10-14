@@ -1348,6 +1348,7 @@ INSTALLER_PY = r'''"""Nova Auto TV para Retroid Pocket Nova: @@MODE@@ (Windows).
 import ctypes
 import os
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -1366,6 +1367,7 @@ BASE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))  # a
 APK = os.path.join(BASE, "NovaAutoTV.apk")
 NO_WINDOW = 0x08000000 if os.name == "nt" else 0  # CREATE_NO_WINDOW: sin consolas emergentes
 WAIT_SECONDS = 120
+DRIVER_CHECK_AFTER = 8  # segundos sin ver la consola antes de buscar un driver ADB que falte
 STEPS = 5
 
 LANGS = [("en", "English"), ("es", "Español"), ("pt", "Português"), ("fr", "Français")]
@@ -1380,19 +1382,44 @@ T = {
                          "pulsa 7 veces «Número de compilación».\n"
                          "2. Ajustes → Sistema → Opciones de desarrollador → activa «Depuración USB».\n"
                          "3. Conecta la consola al PC con un cable USB de datos.\n"
-                         "4. Pulsa «Instalar» y acepta en la consola el aviso «¿Permitir depuración USB?».",
+                         "4. Pulsa «Instalar» y acepta en la consola el aviso «¿Permitir depuración USB?».\n"
+                         "5. ¿El PC no detecta la consola por USB? Usa «Conectar por Wi-Fi» (sin drivers).",
         "steps_uninstall": "1. Conecta la consola al PC con la Depuración USB activada.\n"
                            "2. Pulsa «Desinstalar». Se restaurará la pantalla, se quitará la app de la consola "
-                           "y se borrarán de este PC los archivos que descargó el instalador.",
+                           "y se borrarán de este PC los archivos que descargó el instalador.\n"
+                           "3. ¿El PC no detecta la consola por USB? Usa «Conectar por Wi-Fi» (sin drivers).",
         "btn_install": "Instalar",
         "btn_uninstall": "Desinstalar",
+        "btn_wifi": "Conectar por Wi-Fi",
+        "wifi_title": "Conectar por Wi-Fi",
+        "wifi_steps": "1. Conecta la consola y el PC a la misma red Wi-Fi.\n"
+                      "2. En la consola: Ajustes → Sistema → Opciones de desarrollador → activa «Depuración "
+                      "inalámbrica» y entra en ella.\n"
+                      "3. Pulsa «Vincular dispositivo con código de vinculación».\n"
+                      "4. La IP:puerto se rellena sola (si no, cópiala de la consola). Escribe el código de "
+                      "6 dígitos y pulsa «Vincular y conectar».",
+        "wifi_pair_addr": "IP:puerto de vinculación (p. ej. 192.168.1.20:37123)",
+        "wifi_code": "Código de vinculación (6 dígitos)",
+        "wifi_connect_addr": "«IP y puerto» de la pantalla Depuración inalámbrica (opcional, solo si no conecta sola)",
+        "btn_pair": "Vincular y conectar",
+        "wifi_bad_input": "Escribe la IP:puerto de vinculación y el código de 6 dígitos.",
+        "pairing": "Vinculando…",
+        "paired": "Vinculado.",
+        "pair_failed": "No se pudo vincular. Revisa el código y la IP:puerto (cambian cada vez que abres "
+                       "la ventana de vinculación). {}",
+        "connecting": "Conectando con la consola…",
+        "connect_failed": "No se pudo conectar. Escribe el «IP y puerto» que muestra la pantalla Depuración "
+                          "inalámbrica y pulsa de nuevo.",
         "adb_download": "Descargando adb (Android platform-tools)…",
         "adb_using": "Usando adb: {}",
         "waiting": "Buscando la consola…",
         "unauthorized": "Acepta el aviso «¿Permitir depuración USB?» en la pantalla de la consola "
                         "(marca «Permitir siempre desde este ordenador»).",
-        "no_device": "No se detecta ninguna consola. Comprueba que el cable USB sea de datos y que la Depuración USB "
-                     "esté activada. Si aun así no aparece, instala el driver USB de Google.",
+        "no_device": "No se detecta ninguna consola. En la consola, desliza la barra de notificaciones → toca "
+                     "«USB» → elige «Transferencia de archivos». Prueba otro cable de datos u otro puerto y "
+                     "comprueba que la Depuración USB esté activada. O usa «Conectar por Wi-Fi».",
+        "no_driver": "Windows ve la consola pero sin driver ADB, así que por USB no funcionará. "
+                     "Usa «Conectar por Wi-Fi» (recomendado, no necesita drivers).",
         "timeout": "No se encontró la consola. Revisa la conexión y vuelve a intentarlo.",
         "device_ok": "Consola conectada: {}",
         "installing": "Instalando la app…",
@@ -1417,19 +1444,45 @@ T = {
                          "tap \"Build number\" 7 times.\n"
                          "2. Settings → System → Developer options → turn on \"USB debugging\".\n"
                          "3. Connect the console to the PC with a USB data cable.\n"
-                         "4. Click \"Install\" and accept the \"Allow USB debugging?\" prompt on the console.",
+                         "4. Click \"Install\" and accept the \"Allow USB debugging?\" prompt on the console.\n"
+                         "5. PC doesn't detect the console over USB? Use \"Connect over Wi-Fi\" (no drivers).",
         "steps_uninstall": "1. Connect the console to the PC with USB debugging enabled.\n"
                            "2. Click \"Uninstall\". The screen will be restored, the app removed from the console "
-                           "and the files downloaded by the installer deleted from this PC.",
+                           "and the files downloaded by the installer deleted from this PC.\n"
+                           "3. PC doesn't detect the console over USB? Use \"Connect over Wi-Fi\" (no drivers).",
         "btn_install": "Install",
         "btn_uninstall": "Uninstall",
+        "btn_wifi": "Connect over Wi-Fi",
+        "wifi_title": "Connect over Wi-Fi",
+        "wifi_steps": "1. Connect the console and the PC to the same Wi-Fi network.\n"
+                      "2. On the console: Settings → System → Developer options → turn on \"Wireless "
+                      "debugging\" and open it.\n"
+                      "3. Tap \"Pair device with pairing code\".\n"
+                      "4. The IP:port fills in by itself (if not, copy it from the console). Type the 6-digit "
+                      "code and click \"Pair and connect\".",
+        "wifi_pair_addr": "Pairing IP:port (e.g. 192.168.1.20:37123)",
+        "wifi_code": "Pairing code (6 digits)",
+        "wifi_connect_addr": "\"IP address & Port\" from the Wireless debugging screen (optional, only if it "
+                             "doesn't connect by itself)",
+        "btn_pair": "Pair and connect",
+        "wifi_bad_input": "Type the pairing IP:port and the 6-digit code.",
+        "pairing": "Pairing…",
+        "paired": "Paired.",
+        "pair_failed": "Pairing failed. Check the code and the IP:port (they change every time you open "
+                       "the pairing window). {}",
+        "connecting": "Connecting to the console…",
+        "connect_failed": "Could not connect. Type the \"IP address & Port\" shown on the Wireless debugging "
+                          "screen and click again.",
         "adb_download": "Downloading adb (Android platform-tools)…",
         "adb_using": "Using adb: {}",
         "waiting": "Looking for the console…",
         "unauthorized": "Accept the \"Allow USB debugging?\" prompt on the console screen "
                         "(tick \"Always allow from this computer\").",
-        "no_device": "No console detected. Make sure the USB cable supports data and USB debugging is on. "
-                     "If it still does not show up, install the Google USB driver.",
+        "no_device": "No console detected. On the console, pull down the notification shade → tap \"USB\" → "
+                     "choose \"File transfer\". Try another data cable or USB port and check that USB debugging "
+                     "is on. Or use \"Connect over Wi-Fi\".",
+        "no_driver": "Windows sees the console but without an ADB driver, so USB won't work. "
+                     "Use \"Connect over Wi-Fi\" (recommended, no drivers needed).",
         "timeout": "The console was not found. Check the connection and try again.",
         "device_ok": "Console connected: {}",
         "installing": "Installing the app…",
@@ -1454,19 +1507,45 @@ T = {
                          "toque 7 vezes em \"Número da versão\".\n"
                          "2. Configurações → Sistema → Opções do desenvolvedor → ative \"Depuração USB\".\n"
                          "3. Conecte o console ao PC com um cabo USB de dados.\n"
-                         "4. Clique em \"Instalar\" e aceite no console o aviso \"Permitir depuração USB?\".",
+                         "4. Clique em \"Instalar\" e aceite no console o aviso \"Permitir depuração USB?\".\n"
+                         "5. O PC não detecta o console por USB? Use \"Conectar por Wi-Fi\" (sem drivers).",
         "steps_uninstall": "1. Conecte o console ao PC com a Depuração USB ativada.\n"
                            "2. Clique em \"Desinstalar\". A tela será restaurada, o app será removido do console "
-                           "e os arquivos baixados pelo instalador serão apagados deste PC.",
+                           "e os arquivos baixados pelo instalador serão apagados deste PC.\n"
+                           "3. O PC não detecta o console por USB? Use \"Conectar por Wi-Fi\" (sem drivers).",
         "btn_install": "Instalar",
         "btn_uninstall": "Desinstalar",
+        "btn_wifi": "Conectar por Wi-Fi",
+        "wifi_title": "Conectar por Wi-Fi",
+        "wifi_steps": "1. Conecte o console e o PC à mesma rede Wi-Fi.\n"
+                      "2. No console: Configurações → Sistema → Opções do desenvolvedor → ative \"Depuração "
+                      "por Wi-Fi\" e abra essa opção.\n"
+                      "3. Toque em \"Parear o dispositivo com um código de pareamento\".\n"
+                      "4. O IP:porta é preenchido sozinho (se não, copie do console). Digite o código de "
+                      "6 dígitos e clique em \"Parear e conectar\".",
+        "wifi_pair_addr": "IP:porta de pareamento (ex.: 192.168.1.20:37123)",
+        "wifi_code": "Código de pareamento (6 dígitos)",
+        "wifi_connect_addr": "\"Endereço IP e porta\" da tela Depuração por Wi-Fi (opcional, só se não conectar "
+                             "sozinho)",
+        "btn_pair": "Parear e conectar",
+        "wifi_bad_input": "Digite o IP:porta de pareamento e o código de 6 dígitos.",
+        "pairing": "Pareando…",
+        "paired": "Pareado.",
+        "pair_failed": "Não foi possível parear. Confira o código e o IP:porta (mudam toda vez que você abre "
+                       "a janela de pareamento). {}",
+        "connecting": "Conectando ao console…",
+        "connect_failed": "Não foi possível conectar. Digite o \"Endereço IP e porta\" mostrado na tela "
+                          "Depuração por Wi-Fi e clique de novo.",
         "adb_download": "Baixando o adb (Android platform-tools)…",
         "adb_using": "Usando adb: {}",
         "waiting": "Procurando o console…",
         "unauthorized": "Aceite o aviso \"Permitir depuração USB?\" na tela do console "
                         "(marque \"Sempre permitir neste computador\").",
-        "no_device": "Nenhum console detectado. Verifique se o cabo USB é de dados e se a Depuração USB está ativada. "
-                     "Se mesmo assim não aparecer, instale o driver USB do Google.",
+        "no_device": "Nenhum console detectado. No console, deslize a barra de notificações → toque em \"USB\" → "
+                     "escolha \"Transferência de arquivos\". Tente outro cabo de dados ou outra porta e verifique "
+                     "se a Depuração USB está ativada. Ou use \"Conectar por Wi-Fi\".",
+        "no_driver": "O Windows vê o console mas sem driver ADB, então por USB não vai funcionar. "
+                     "Use \"Conectar por Wi-Fi\" (recomendado, não precisa de drivers).",
         "timeout": "O console não foi encontrado. Verifique a conexão e tente de novo.",
         "device_ok": "Console conectado: {}",
         "installing": "Instalando o app…",
@@ -1491,19 +1570,45 @@ T = {
                          "l'appareil → appuyez 7 fois sur « Numéro de build ».\n"
                          "2. Paramètres → Système → Options pour les développeurs → activez « Débogage USB ».\n"
                          "3. Branchez la console au PC avec un câble USB de données.\n"
-                         "4. Cliquez sur « Installer » et acceptez sur la console « Autoriser le débogage USB ? ».",
+                         "4. Cliquez sur « Installer » et acceptez sur la console « Autoriser le débogage USB ? ».\n"
+                         "5. Le PC ne détecte pas la console en USB ? Utilisez « Connecter en Wi-Fi » (sans pilotes).",
         "steps_uninstall": "1. Branchez la console au PC avec le débogage USB activé.\n"
                            "2. Cliquez sur « Désinstaller ». L'écran sera restauré, l'app retirée de la console "
-                           "et les fichiers téléchargés par l'installateur supprimés de ce PC.",
+                           "et les fichiers téléchargés par l'installateur supprimés de ce PC.\n"
+                           "3. Le PC ne détecte pas la console en USB ? Utilisez « Connecter en Wi-Fi » (sans pilotes).",
         "btn_install": "Installer",
         "btn_uninstall": "Désinstaller",
+        "btn_wifi": "Connecter en Wi-Fi",
+        "wifi_title": "Connecter en Wi-Fi",
+        "wifi_steps": "1. Connectez la console et le PC au même réseau Wi-Fi.\n"
+                      "2. Sur la console : Paramètres → Système → Options pour les développeurs → activez "
+                      "« Débogage sans fil » et ouvrez-le.\n"
+                      "3. Appuyez sur « Associer l'appareil avec un code d'association ».\n"
+                      "4. L'IP:port se remplit tout seul (sinon, copiez-le depuis la console). Saisissez le code "
+                      "à 6 chiffres et cliquez sur « Associer et connecter ».",
+        "wifi_pair_addr": "IP:port d'association (ex. 192.168.1.20:37123)",
+        "wifi_code": "Code d'association (6 chiffres)",
+        "wifi_connect_addr": "« Adresse IP et port » de l'écran Débogage sans fil (facultatif, seulement si la "
+                             "connexion ne se fait pas seule)",
+        "btn_pair": "Associer et connecter",
+        "wifi_bad_input": "Saisissez l'IP:port d'association et le code à 6 chiffres.",
+        "pairing": "Association…",
+        "paired": "Associée.",
+        "pair_failed": "Échec de l'association. Vérifiez le code et l'IP:port (ils changent à chaque ouverture "
+                       "de la fenêtre d'association). {}",
+        "connecting": "Connexion à la console…",
+        "connect_failed": "Connexion impossible. Saisissez l'« Adresse IP et port » affichée sur l'écran "
+                          "Débogage sans fil et cliquez à nouveau.",
         "adb_download": "Téléchargement d'adb (Android platform-tools)…",
         "adb_using": "adb utilisé : {}",
         "waiting": "Recherche de la console…",
         "unauthorized": "Acceptez « Autoriser le débogage USB ? » sur l'écran de la console "
                         "(cochez « Toujours autoriser sur cet ordinateur »).",
-        "no_device": "Aucune console détectée. Vérifiez que le câble USB transmet les données et que le débogage USB "
-                     "est activé. Si elle n'apparaît toujours pas, installez le pilote USB de Google.",
+        "no_device": "Aucune console détectée. Sur la console, faites glisser la barre de notifications → touchez "
+                     "« USB » → choisissez « Transfert de fichiers ». Essayez un autre câble de données ou un autre "
+                     "port et vérifiez que le débogage USB est activé. Ou utilisez « Connecter en Wi-Fi ».",
+        "no_driver": "Windows voit la console mais sans pilote ADB, l'USB ne fonctionnera donc pas. "
+                     "Utilisez « Connecter en Wi-Fi » (recommandé, aucun pilote nécessaire).",
         "timeout": "Console introuvable. Vérifiez la connexion et réessayez.",
         "device_ok": "Console connectée : {}",
         "installing": "Installation de l'app…",
@@ -1532,6 +1637,10 @@ def system_lang():
 
 class Failed(Exception):
     """Error con mensaje traducible: Failed(clave, *argumentos)."""
+
+
+class Cancelled(Exception):
+    """La espera por USB se cancelo porque el usuario eligio conectar por Wi-Fi."""
 
 
 # ---- Aspecto: tema oscuro plano, solo con tkinter ----
@@ -1568,12 +1677,13 @@ def dark_titlebar(win):
 
 
 class RoundButton(tk.Canvas):
-    """Boton plano con esquinas redondeadas y efecto hover."""
+    """Boton plano con esquinas redondeadas y efecto hover (relleno, o solo contorno si outline=True)."""
 
-    def __init__(self, master, command, height=48, radius=14):
+    def __init__(self, master, command, height=48, radius=14, outline=False):
         super().__init__(master, height=height, bg=master["bg"], highlightthickness=0, bd=0, cursor="hand2")
         self.command = command
         self.radius = radius
+        self.outline = outline
         self.text = ""
         self.enabled = True
         self.hover = False
@@ -1604,6 +1714,13 @@ class RoundButton(tk.Canvas):
         w, h = self.winfo_width(), self.winfo_height()
         if w < 2:
             return
+        if self.outline:
+            border = ACCENT if self.enabled else CARD_HI
+            fill = CARD_HI if self.enabled and self.hover else self["bg"]
+            fg = (ACCENT_HOVER if self.hover else ACCENT) if self.enabled else MUTED
+            rounded_rect(self, 2, 2, w - 2, h - 2, self.radius, fill=fill, outline=border, width=2)
+            self.create_text(w / 2, h / 2, text=self.text, fill=fg, font=(FONT, 11, "bold"))
+            return
         if not self.enabled:
             fill, fg = CARD_HI, MUTED
         else:
@@ -1620,10 +1737,16 @@ class App:
         self.adb_path = None
         self.serial = None
         self.egg_win = None
+        self.worker = None
+        self.adb_lock = threading.Lock()
+        self.cancel_wait = threading.Event()  # el boton Wi-Fi corta la espera por USB
+        self.wifi_win = None
+        self.wifi_auto = ""  # ultima IP:puerto de vinculacion rellenada por mDNS
+        self.paired_addr = None
 
         root.configure(bg=BG)
-        root.geometry("620x720")
-        root.minsize(560, 640)
+        root.geometry("620x800")
+        root.minsize(560, 720)
         self.setup_style()
         self.set_icon()
 
@@ -1661,6 +1784,8 @@ class App:
 
         self.button = RoundButton(outer, self.start)
         self.button.pack(fill="x")
+        self.wifi_button = RoundButton(outer, self.open_wifi, height=40, radius=12, outline=True)
+        self.wifi_button.pack(fill="x", pady=(10, 0))
 
         # Estado + progreso
         self.status = tk.Label(outer, bg=BG, fg=MUTED, font=(FONT, 10), anchor="w", justify="left")
@@ -1725,6 +1850,7 @@ class App:
         self.credit.configure(text=self.t("credit"))
         self.lang_label.configure(text=self.t("language"))
         self.button.set_text(self.t("btn_" + MODE))
+        self.wifi_button.set_text(self.t("btn_wifi"))
         self.render_steps()
 
     def render_steps(self):
@@ -1772,6 +1898,75 @@ class App:
         dark_titlebar(win)
         self.egg_win = win
 
+    def open_wifi(self):
+        """Dialogo de Depuracion inalambrica: adb pair + adb connect, sin drivers USB."""
+        if self.wifi_win is not None:
+            self.wifi_win.lift()
+            return
+        self.cancel_wait.set()
+        win = tk.Toplevel(self.root, bg=BG, padx=22, pady=18)
+        win.title(self.t("wifi_title"))
+        win.resizable(False, False)
+        win.transient(self.root)
+        tk.Label(win, text=self.t("wifi_title"), bg=BG, fg=TEXT, font=(FONT, 14, "bold"),
+                 anchor="w").pack(fill="x")
+        card = tk.Frame(win, bg=CARD, padx=16, pady=12)
+        card.pack(fill="x", pady=(12, 8))
+        tk.Label(card, text=self.t("wifi_steps"), bg=CARD, fg=TEXT, font=(FONT, 10), justify="left",
+                 anchor="w", wraplength=470).pack(fill="x")
+        entries = []
+        for key in ("wifi_pair_addr", "wifi_code", "wifi_connect_addr"):
+            tk.Label(win, text=self.t(key), bg=BG, fg=MUTED, font=(FONT, 9), anchor="w", justify="left",
+                     wraplength=500).pack(fill="x", pady=(8, 3))
+            entry = tk.Entry(win, bg=CARD, fg=TEXT, insertbackground=TEXT, relief="flat", font=(MONO, 12),
+                             highlightthickness=1, highlightbackground=CARD_HI, highlightcolor=ACCENT)
+            entry.pack(fill="x", ipady=6)
+            entries.append(entry)
+        self.wifi_addr, self.wifi_code, self.wifi_connect = entries
+        self.wifi_msg = tk.Label(win, bg=BG, fg=MUTED, font=(FONT, 10), anchor="w", justify="left",
+                                 wraplength=500)
+        self.wifi_msg.pack(fill="x", pady=(12, 8))
+        self.pair_button = RoundButton(win, self.pair, height=44)
+        self.pair_button.set_text(self.t("btn_pair"))
+        self.pair_button.pack(fill="x")
+
+        win.protocol("WM_DELETE_WINDOW", self.close_wifi)
+        win.bind("<Escape>", lambda e: self.close_wifi())
+        self.wifi_code.bind("<Return>", lambda e: self.pair())
+        dark_titlebar(win)
+        self.wifi_win = win
+        self.wifi_auto = ""
+        self.wifi_code.focus_set()
+        win.after(100, lambda: self.grab(win))
+        threading.Thread(target=self.watch_mdns, args=(win,), daemon=True).start()
+
+    def grab(self, win):
+        try:
+            win.grab_set()  # modal: no se puede pulsar Instalar mientras se vincula
+        except tk.TclError:
+            pass
+
+    def close_wifi(self):
+        if self.wifi_win is not None:
+            self.wifi_win.destroy()
+            self.wifi_win = None
+
+    def pair(self):
+        if not self.pair_button.enabled:
+            return
+        addr = self.wifi_addr.get().strip()
+        code = "".join(self.wifi_code.get().split())
+        connect = self.wifi_connect.get().strip()
+        self.pair_button.set_enabled(False)
+        threading.Thread(target=self.wifi_work, args=(addr, code, connect), daemon=True).start()
+
+    def start_when_idle(self):
+        """Tras conectar por Wi-Fi: espera a que termine la espera USB cancelada y lanza el flujo normal."""
+        if self.worker is not None and self.worker.is_alive():
+            self.root.after(200, self.start_when_idle)
+        else:
+            self.start()
+
     def poll(self):
         try:
             while True:
@@ -1787,7 +1982,26 @@ class App:
                     self.progress["value"] = value
                 elif kind == "done":
                     self.button.set_enabled(True)
+                    self.wifi_button.set_enabled(True)
                     self.lang_box.configure(state="readonly")
+                elif kind == "wifi_button":
+                    self.wifi_button.set_enabled(value)
+                elif self.wifi_win is None:
+                    continue  # mensajes de un dialogo Wi-Fi ya cerrado
+                elif kind == "wifi_msg":
+                    text, level = value
+                    self.wifi_msg.configure(text=text, fg={"good": GOOD, "bad": BAD}.get(level, TEXT))
+                elif kind == "wifi_addr":
+                    current = self.wifi_addr.get().strip()
+                    if current in ("", self.wifi_auto) and current != value:
+                        self.wifi_addr.delete(0, "end")
+                        self.wifi_addr.insert(0, value)
+                    self.wifi_auto = value
+                elif kind == "wifi_idle":
+                    self.pair_button.set_enabled(True)
+                elif kind == "wifi_ok":
+                    self.close_wifi()
+                    self.start_when_idle()
         except queue.Empty:
             pass
         self.root.after(100, self.poll)
@@ -1796,7 +2010,9 @@ class App:
         self.button.set_enabled(False)
         self.lang_box.configure(state="disabled")
         self.progress["value"] = 0
-        threading.Thread(target=self.work, daemon=True).start()
+        self.cancel_wait.clear()
+        self.worker = threading.Thread(target=self.work, daemon=True)
+        self.worker.start()
 
     # ---- trabajo (hilo aparte; se comunica por self.events) ----
 
@@ -1812,52 +2028,157 @@ class App:
                 self.install()
             else:
                 self.uninstall()
+        except Cancelled:
+            pass
         except Failed as e:
             self.say(*e.args, level="bad")
         except Exception as e:
             self.say("error", e, level="bad")
         self.events.put(("done", None))
 
-    def adb(self, *args, timeout=120):
-        cmd = [self.adb_path] + (["-s", self.serial] if self.serial else []) + list(args)
-        r = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True, encoding="utf-8",
-                           errors="replace", creationflags=NO_WINDOW, timeout=timeout)
+    def adb_raw(self, *args, timeout=120):
+        """adb sin -s: para comandos del servidor (devices, pair, connect, mdns)."""
+        r = subprocess.run([self.adb_path] + list(args), stdin=subprocess.DEVNULL, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW,
+                           timeout=timeout)
         return r.returncode, (r.stdout + r.stderr).strip()
 
+    def adb(self, *args, timeout=120):
+        return self.adb_raw(*((["-s", self.serial] if self.serial else []) + list(args)), timeout=timeout)
+
     def ensure_adb(self):
-        local = os.path.join(APP_DIR, "platform-tools", "adb.exe")
-        path = shutil.which("adb") or (local if os.path.exists(local) else None)
-        if not path:
-            self.say("adb_download")
-            os.makedirs(APP_DIR, exist_ok=True)
-            zip_path = os.path.join(APP_DIR, "platform-tools.zip")
-            urllib.request.urlretrieve(PLATFORM_TOOLS_URL, zip_path)
-            with zipfile.ZipFile(zip_path) as zf:
-                zf.extractall(APP_DIR)
-            os.remove(zip_path)
-            path = local
-        self.adb_path = path
-        self.say("adb_using", path)
+        with self.adb_lock:  # el dialogo Wi-Fi y el flujo normal pueden pedirlo a la vez
+            if self.adb_path and os.path.exists(self.adb_path):
+                return
+            local = os.path.join(APP_DIR, "platform-tools", "adb.exe")
+            path = shutil.which("adb") or (local if os.path.exists(local) else None)
+            if not path:
+                self.say("adb_download")
+                os.makedirs(APP_DIR, exist_ok=True)
+                zip_path = os.path.join(APP_DIR, "platform-tools.zip")
+                urllib.request.urlretrieve(PLATFORM_TOOLS_URL, zip_path)
+                with zipfile.ZipFile(zip_path) as zf:
+                    zf.extractall(APP_DIR)
+                os.remove(zip_path)
+                path = local
+            self.adb_path = path
+            self.say("adb_using", path)
+
+    def driver_missing(self):
+        """True si Windows tiene la consola enchufada pero sin driver ADB (aviso amarillo en el Administrador)."""
+        if os.name != "nt":
+            return False
+        query = ("Get-PnpDevice -PresentOnly | Where-Object { $_.Status -ne 'OK' -and "
+                 "$_.FriendlyName -match 'ADB|Android|Retroid|Nova' } | Select-Object -ExpandProperty FriendlyName")
+        try:
+            r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", query],
+                               stdin=subprocess.DEVNULL, capture_output=True, text=True, errors="replace",
+                               creationflags=NO_WINDOW, timeout=30)
+        except Exception:
+            return False
+        return bool(r.stdout.strip())
 
     def wait_device(self):
         self.say("waiting")
+        self.serial = None
         self.adb("start-server", timeout=60)
         last = None
-        deadline = time.time() + WAIT_SECONDS
-        while time.time() < deadline:
+        started = time.time()
+        driver_checked = no_driver = False
+        while time.time() < started + WAIT_SECONDS:
+            if self.cancel_wait.is_set():
+                raise Cancelled()
             _, out = self.adb("devices")
             rows = [line.split("\t") for line in out.splitlines() if "\t" in line]
             ready = [serial for serial, state in rows if state == "device"]
             if ready:
                 self.serial = ready[0]
+                self.events.put(("wifi_button", False))
                 self.say("device_ok", self.serial)
                 return
-            state = "unauthorized" if any(s == "unauthorized" for _, s in rows) else "no_device"
+            if not rows and not driver_checked and time.time() - started > DRIVER_CHECK_AFTER:
+                driver_checked = True
+                no_driver = self.driver_missing()
+            if any(s == "unauthorized" for _, s in rows):
+                state = "unauthorized"
+            else:
+                state = "no_driver" if no_driver else "no_device"
             if state != last:
                 self.say(state)
                 last = state
             time.sleep(2)
         raise Failed("timeout")
+
+    # ---- Depuracion inalambrica (hilos del dialogo Wi-Fi) ----
+
+    def wifi_say(self, key, *args, level="info"):
+        self.events.put(("wifi_msg", (self.t(key, *args), level)))
+
+    def mdns_services(self):
+        """[(tipo, "ip:puerto")] de 'adb mdns services'; tipo es "pairing" o "connect"."""
+        try:
+            _, out = self.adb_raw("mdns", "services", timeout=10)
+        except subprocess.TimeoutExpired:
+            return []
+        found = []
+        for line in out.splitlines():
+            m = re.search(r"_adb-tls-(pairing|connect)\._tcp.*?(\d+\.\d+\.\d+\.\d+:\d+)", line)
+            if m:
+                found.append((m.group(1), m.group(2)))
+        return found
+
+    def watch_mdns(self, win):
+        """Mientras el dialogo este abierto, rellena la IP:puerto de vinculacion que anuncia la consola."""
+        try:
+            self.ensure_adb()
+            self.adb_raw("start-server", timeout=60)
+        except Exception as e:
+            self.wifi_say("error", e, level="bad")
+            return
+        while self.wifi_win is win:
+            pairing = [addr for kind, addr in self.mdns_services() if kind == "pairing"]
+            if pairing:
+                self.events.put(("wifi_addr", pairing[0]))
+            time.sleep(2)
+
+    def wifi_work(self, addr, code, connect):
+        try:
+            self.ensure_adb()
+            if code or not self.paired_addr:
+                if not re.fullmatch(r"[^\s:]+:\d+", addr) or not code:
+                    raise Failed("wifi_bad_input")
+                self.wifi_say("pairing")
+                _, out = self.adb_raw("pair", addr, code, timeout=30)
+                if "Successfully paired" not in out:
+                    raise Failed("pair_failed", out)
+                self.paired_addr = addr
+                self.wifi_say("paired", level="good")
+            self.wifi_say("connecting")
+            if not connect:
+                # La consola anuncia por mDNS su puerto de conexion; a veces adb ya se conecta solo.
+                ip = self.paired_addr.rsplit(":", 1)[0]
+                deadline = time.time() + 12
+                while not connect and time.time() < deadline:
+                    _, out = self.adb_raw("devices")
+                    if any(line.endswith("\tdevice") for line in out.splitlines()):
+                        self.events.put(("wifi_ok", None))
+                        return
+                    connect = next((a for kind, a in self.mdns_services()
+                                    if kind == "connect" and a.rsplit(":", 1)[0] == ip), "")
+                    if not connect:
+                        time.sleep(2)
+            if not connect:
+                raise Failed("connect_failed")
+            _, out = self.adb_raw("connect", connect, timeout=30)
+            if "connected to" not in out:
+                raise Failed("connect_failed")
+            self.events.put(("wifi_ok", None))
+        except Failed as e:
+            self.wifi_say(*e.args, level="bad")
+        except Exception as e:
+            self.wifi_say("error", e, level="bad")
+        finally:
+            self.events.put(("wifi_idle", None))
 
     def install(self):
         self.ensure_adb()
@@ -1905,6 +2226,7 @@ class App:
         self.adb("kill-server")
         time.sleep(1)
         shutil.rmtree(APP_DIR, ignore_errors=True)
+        self.adb_path = None
         self.step(5)
         self.say("done_uninstall", level="good")
 
